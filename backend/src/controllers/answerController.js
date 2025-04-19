@@ -12,6 +12,11 @@ export const addAnswer = async (req, res) => {
                 questionId,
                 authorId: userId,
             },
+            include: {
+                author: {
+                    select: { username: true },
+                },
+            },
         });
         res.status(201).json(newAnswer);
     } catch (err) {

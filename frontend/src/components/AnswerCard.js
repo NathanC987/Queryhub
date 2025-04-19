@@ -54,7 +54,7 @@ const AnswerCard = ({ answer }) => {
         </button>
       </div>
       <p>{answer.body}</p>
-      <p className="answer-meta">Answered by {answer.author.username}</p>
+      <p className="answer-meta">Answered by {answer.author ? answer.author.username : "Unknown"}</p>
     </div>
   );
 };

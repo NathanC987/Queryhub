@@ -85,7 +85,10 @@ const QuestionPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await API.post(`/answers/${id}`, { body: newAnswer });
+      const res = await API.post("/answers", { 
+        questionId: question.id,
+        body: newAnswer 
+      });
       setAnswers([...answers, res.data]);
       setNewAnswer("");
     } catch (err) {
