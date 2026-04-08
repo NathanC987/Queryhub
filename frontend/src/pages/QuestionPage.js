@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import API from "../api";
 import AnswerCard from "../components/AnswerCard";
+import MarkdownContent from "../components/MarkdownContent";
+import { Link } from "react-router-dom";
 
 const getStoredUser = () => {
   try {
@@ -26,6 +28,16 @@ const QuestionPage = () => {
 
   const user = getStoredUser();
 
+  const sortAnswersWithAcceptedFirst = (answerList, acceptedAnswerId) => {
+    return [...answerList].sort((a, b) => {
+      const aAccepted = a.id === acceptedAnswerId;
+      const bAccepted = b.id === acceptedAnswerId;
+      if (aAccepted && !bAccepted) return -1;
+      if (!aAccepted && bAccepted) return 1;
+      return 0;
+    });
+  };
+
   useEffect(() => {
     const fetchQuestion = async () => {
       try {
@@ -40,7 +52,7 @@ const QuestionPage = () => {
         const existingVote = q.votes?.find((v) => v.userId === user?.id);
         setUserVoteValue(existingVote?.value || 0);
 
-        setAnswers(res.data.answers);
+        setAnswers(sortAnswersWithAcceptedFirst(res.data.answers, q.acceptedAnswerId));
 
         setEditedTitle(q.title);
         setEditedBody(q.body);
@@ -103,7 +115,7 @@ const QuestionPage = () => {
         questionId: question.id,
         body: newAnswer 
       });
-      setAnswers([...answers, res.data]);
+      setAnswers(sortAnswersWithAcceptedFirst([...answers, res.data], question.acceptedAnswerId));
       setNewAnswer("");
     } catch (err) {
       alert(err.response?.data?.error || "Failed to post answer");
@@ -134,6 +146,37 @@ const QuestionPage = () => {
       alert("Question updated.");
     } catch (err) {
       alert(err.response?.data?.error || "Failed to update question");
+    }
+  };
+
+  const handleAcceptAnswer = async (answerId) => {
+    if (!user) {
+      alert("Please log in to accept an answer");
+      return;
+    }
+
+    try {
+      const res = await API.patch(`/questions/${id}/accept-answer`, { answerId });
+      const acceptedAnswerId = res.data.acceptedAnswerId;
+      setQuestion({ ...question, acceptedAnswerId });
+      setAnswers(sortAnswersWithAcceptedFirst(answers, acceptedAnswerId));
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to accept answer");
+    }
+  };
+
+  const handleUnacceptAnswer = async () => {
+    if (!user) {
+      alert("Please log in to update accepted answer");
+      return;
+    }
+
+    try {
+      await API.patch(`/questions/${id}/unaccept-answer`);
+      setQuestion({ ...question, acceptedAnswerId: null });
+      setAnswers(sortAnswersWithAcceptedFirst(answers, null));
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to remove accepted answer");
     }
   };
 
@@ -182,7 +225,16 @@ const QuestionPage = () => {
         ) : (
           <div className="question-content">
             <h2 className="question-title">{question.title}</h2>
-            <p className="question-body">{question.body}</p>
+            {question.tags?.length > 0 && (
+              <div className="tag-chip-list compact">
+                {question.tags.map((entry) => (
+                  <Link key={entry.id} to={`/tags/${entry.tag.name}`} className="tag-link-chip">
+                    #{entry.tag.name}
+                  </Link>
+                ))}
+              </div>
+            )}
+            <MarkdownContent content={question.body} />
             <p className="question-meta">Asked by {question.author.username}</p>
 
             {/* Edit & Delete Buttons - Only for author */}
@@ -202,16 +254,28 @@ const QuestionPage = () => {
       {answers.length === 0 ? (
         <p className="no-answers">No answers yet.</p>
       ) : (
-        answers.map((a) => <AnswerCard key={a.id} answer={a} />)
+        answers.map((a) => (
+          <AnswerCard
+            key={a.id}
+            answer={a}
+            isAccepted={question.acceptedAnswerId === a.id}
+            canAccept={user?.id === question.authorId}
+            onAccept={() => handleAcceptAnswer(a.id)}
+            onUnaccept={handleUnacceptAnswer}
+          />
+        ))
       )}
 
       {user && (
         <form onSubmit={handleSubmit} className="answer-form">
+          <p className="markdown-help-text">
+            Supports Markdown: paragraphs, bullet lists, inline code, and fenced code blocks.
+          </p>
           <textarea
             rows="4"
             value={newAnswer}
             onChange={(e) => setNewAnswer(e.target.value)}
-            placeholder="Write your answer..."
+            placeholder="Write your answer in Markdown..."
             required
             className="answer-textarea"
           />

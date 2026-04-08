@@ -8,6 +8,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import AskQuestion from "./pages/AskQuestion";
 import QuestionPage from "./pages/QuestionPage";
+import TagPage from "./pages/TagPage";
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/ask" element={<AskQuestion />} />
           <Route path="/questions/:id" element={<QuestionPage />} />
+          <Route path="/tags/:name" element={<TagPage />} />
         </Routes>
         </div>
         <Footer />

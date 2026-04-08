@@ -5,6 +5,7 @@ import authRoutes from "./routes/authRoutes.js";
 import questionRoutes from "./routes/questionRoutes.js";
 import answerRoutes from "./routes/answerRoutes.js";
 import voteRoutes from "./routes/voteRoutes.js";
+import tagRoutes from "./routes/tagRoutes.js";
 
 dotenv.config();
 
@@ -19,6 +20,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/questions", questionRoutes);
 app.use("/api/answers", answerRoutes);
 app.use("/api/votes", voteRoutes);
+app.use("/api/tags", tagRoutes);
 
 app.get("/", (req, res) => {
   res.send("Welcome to QueryHub API!");

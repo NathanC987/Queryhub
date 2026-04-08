@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import API from "../api";
+import MarkdownContent from "./MarkdownContent";
 
 const getStoredUser = () => {
   try {
@@ -10,7 +11,7 @@ const getStoredUser = () => {
   }
 };
 
-const AnswerCard = ({ answer }) => {
+const AnswerCard = ({ answer, isAccepted, canAccept, onAccept, onUnaccept }) => {
   const user = getStoredUser();
 
   const initialVoteCount = answer.votes
@@ -44,7 +45,21 @@ const AnswerCard = ({ answer }) => {
   };
 
   return (
-    <div className="answer-card">
+    <div className={`answer-card ${isAccepted ? "accepted-answer-card" : ""}`}>
+      <div className="answer-card-top-row">
+        {isAccepted && <span className="accepted-answer-badge">Accepted Answer</span>}
+        {canAccept && (
+          isAccepted ? (
+            <button onClick={onUnaccept} className="accept-answer-btn unaccept-answer-btn">
+              Unaccept
+            </button>
+          ) : (
+            <button onClick={onAccept} className="accept-answer-btn">
+              Accept
+            </button>
+          )
+        )}
+      </div>
       <div className="vote-buttons">
         <button
           onClick={() => handleVote(1)}
@@ -60,7 +75,7 @@ const AnswerCard = ({ answer }) => {
           ▼
         </button>
       </div>
-      <p>{answer.body}</p>
+      <MarkdownContent content={answer.body} />
       <p className="answer-meta">Answered by {answer.author ? answer.author.username : "Unknown"}</p>
     </div>
   );
