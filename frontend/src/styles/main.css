@@ -372,6 +372,12 @@ input:focus, textarea:focus,
   color: #555;
 }
 
+.question-author {
+  margin-top: 4px;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
 .markdown-help-text {
   margin-top: -8px;
   margin-bottom: 8px;
@@ -529,18 +535,29 @@ input:focus, textarea:focus,
 
 .question-card-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
+  margin-bottom: 10px;
 }
 
-.question-meta span {
-  margin-left: 12px;
+.question-card-stats {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin-bottom: 6px;
 }
 
 /* For clickable card titles inside links */
 .question-title-link {
+  display: block;
   text-decoration: none;
   color: inherit;
+}
+
+.question-card .question-title {
+  margin-bottom: 0;
 }
 
 .question-title-link:hover {

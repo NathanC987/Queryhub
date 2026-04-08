@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import API from "../api";
 import MarkdownContent from "./MarkdownContent";
+import { formatDateOnly, formatEditedMeta } from "../utils/dateMeta";
 
 const getStoredUser = () => {
   try {
@@ -13,6 +14,8 @@ const getStoredUser = () => {
 
 const AnswerCard = ({ answer, isAccepted, canAccept, onAccept, onUnaccept }) => {
   const user = getStoredUser();
+  const answeredOn = formatDateOnly(answer.createdAt);
+  const editedMeta = formatEditedMeta(answer.createdAt, answer.updatedAt);
 
   const initialVoteCount = answer.votes
     ? answer.votes.reduce((sum, v) => sum + v.value, 0)
@@ -76,7 +79,10 @@ const AnswerCard = ({ answer, isAccepted, canAccept, onAccept, onUnaccept }) => 
         </button>
       </div>
       <MarkdownContent content={answer.body} />
-      <p className="answer-meta">Answered by {answer.author ? answer.author.username : "Unknown"}</p>
+      <p className="answer-meta">
+        Answered by <strong>{answer.author ? answer.author.username : "Unknown"}</strong> on {answeredOn}
+        {editedMeta}
+      </p>
     </div>
   );
 };

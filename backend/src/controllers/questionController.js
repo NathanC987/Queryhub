@@ -213,8 +213,31 @@ export const deleteQuestion = async (req, res) => {
     
         if (!existing) return res.status(404).json({ error: "Question not found" });
         if (existing.authorId !== userId) return res.status(403).json({ error: "Unauthorized" });
-    
-        await prisma.question.delete({ where: { id: questionId } });
+
+        await prisma.$transaction(async (tx) => {
+            const answers = await tx.answer.findMany({
+                where: { questionId },
+                select: { id: true },
+            });
+
+            const answerIds = answers.map((answer) => answer.id);
+
+            await tx.questionTag.deleteMany({ where: { questionId } });
+            await tx.vote.deleteMany({ where: { questionId } });
+
+            if (answerIds.length > 0) {
+                await tx.vote.deleteMany({
+                    where: {
+                        answerId: {
+                            in: answerIds,
+                        },
+                    },
+                });
+            }
+
+            await tx.answer.deleteMany({ where: { questionId } });
+            await tx.question.delete({ where: { id: questionId } });
+        });
     
         res.json({ message: "Question deleted successfully" });
     } catch (err) {
@@ -279,6 +302,7 @@ export const getQuestionDetails = async (req, res) => {
                 votes: question.votes,
                 tags: question.tags,
                 createdAt: question.createdAt,
+                updatedAt: question.updatedAt,
                 acceptedAnswerId: question.acceptedAnswerId,
             },
             answers: answersWithVotes,

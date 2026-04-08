@@ -4,6 +4,7 @@ import API from "../api";
 import AnswerCard from "../components/AnswerCard";
 import MarkdownContent from "../components/MarkdownContent";
 import { Link } from "react-router-dom";
+import { formatDateOnly, formatEditedMeta } from "../utils/dateMeta";
 
 const getStoredUser = () => {
   try {
@@ -136,12 +137,18 @@ const QuestionPage = () => {
 
   const handleUpdate = async () => {
     try {
-      await API.put(`/questions/${id}`, {
+      const res = await API.put(`/questions/${id}`, {
         title: editedTitle,
         body: editedBody,
       });
 
-      setQuestion({ ...question, title: editedTitle, body: editedBody });
+      setQuestion((prev) => ({
+        ...prev,
+        title: res.data.title,
+        body: res.data.body,
+        updatedAt: res.data.updatedAt,
+        tags: res.data.tags || prev.tags,
+      }));
       setIsEditing(false);
       alert("Question updated.");
     } catch (err) {
@@ -235,7 +242,9 @@ const QuestionPage = () => {
               </div>
             )}
             <MarkdownContent content={question.body} />
-            <p className="question-meta">Asked by {question.author.username}</p>
+            <p className="question-meta">
+              Asked by <strong>{question.author.username}</strong> on {formatDateOnly(question.createdAt)}{formatEditedMeta(question.createdAt, question.updatedAt)}
+            </p>
 
             {/* Edit & Delete Buttons - Only for author */}
             {user?.id === question.authorId && (
