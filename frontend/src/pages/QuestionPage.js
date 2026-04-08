@@ -3,6 +3,15 @@ import { useParams } from "react-router-dom";
 import API from "../api";
 import AnswerCard from "../components/AnswerCard";
 
+const getStoredUser = () => {
+  try {
+    const rawUser = localStorage.getItem("user");
+    return rawUser ? JSON.parse(rawUser) : null;
+  } catch (error) {
+    return null;
+  }
+};
+
 const QuestionPage = () => {
   const { id } = useParams();
   const [question, setQuestion] = useState(null);
@@ -15,7 +24,7 @@ const QuestionPage = () => {
   const [editedTitle, setEditedTitle] = useState("");
   const [editedBody, setEditedBody] = useState("");
 
-  const user = JSON.parse(localStorage.getItem("user"));
+  const user = getStoredUser();
 
   useEffect(() => {
     const fetchQuestion = async () => {
@@ -46,6 +55,11 @@ const QuestionPage = () => {
   }, [id, user?.id]);
 
   const handleQuestionVote = async (value) => {
+    if (!user) {
+      alert("Please log in to vote");
+      return;
+    }
+
     try {
       const res = await API.post("/votes/question", {
         questionId: question.id,
@@ -100,11 +114,7 @@ const QuestionPage = () => {
     if (!window.confirm("Are you sure you want to delete this question?")) return;
 
     try {
-      await API.delete(`/questions/${id}`, {
-        headers: {
-          Authorization: `Bearer ${user.token}`,
-        },
-      });
+      await API.delete(`/questions/${id}`);
       alert("Question deleted.");
       window.location.href = "/";
     } catch (err) {
@@ -117,10 +127,6 @@ const QuestionPage = () => {
       await API.put(`/questions/${id}`, {
         title: editedTitle,
         body: editedBody,
-      }, {
-        headers: {
-          Authorization: `Bearer ${user.token}`,
-        },
       });
 
       setQuestion({ ...question, title: editedTitle, body: editedBody });

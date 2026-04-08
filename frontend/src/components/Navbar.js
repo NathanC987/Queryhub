@@ -2,9 +2,18 @@ import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import '../styles/Navbar.css';
 
+const getStoredUser = () => {
+  try {
+    const rawUser = localStorage.getItem("user");
+    return rawUser ? JSON.parse(rawUser) : null;
+  } catch (error) {
+    return null;
+  }
+};
+
 const Navbar = () => {
   const navigate = useNavigate();
-  const user = JSON.parse(localStorage.getItem("user"));
+  const user = getStoredUser();
 
   const handleLogout = () => {
     localStorage.removeItem("token");

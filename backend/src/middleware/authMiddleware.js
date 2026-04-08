@@ -3,6 +3,10 @@ import jwt from "jsonwebtoken";
 const JWT_SECRET = process.env.JWT_SECRET;
 
 export const authenticateToken = (req, res, next) => {
+    if (!JWT_SECRET) {
+        return res.status(500).json({ error: "Server auth configuration error" });
+    }
+
     const authHeader = req.headers.authorization;
     const token = authHeader?.split(" ")[1];
 

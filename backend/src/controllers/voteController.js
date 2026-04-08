@@ -2,9 +2,23 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+const parseVoteValue = (rawValue) => Number.parseInt(rawValue, 10);
+
+const voteResponse = ({ userId, targetType, targetId, value }) => ({
+    userId,
+    targetType,
+    targetId,
+    value,
+});
+
 export const voteOnQuestion = async (req, res) => {
-    const { questionId, value } = req.body;
+    const questionId = Number.parseInt(req.body?.questionId, 10);
+    const value = parseVoteValue(req.body?.value);
     const userId = req.user.userId;
+
+    if (!Number.isInteger(questionId)) {
+        return res.status(400).json({ error: "Invalid question id" });
+    }
 
     if (![1, -1].includes(value)) {
         return res.status(400).json({ error: "Invalid vote value" });
@@ -15,29 +29,37 @@ export const voteOnQuestion = async (req, res) => {
             where: { userId, questionId },
         });
 
-        let vote;
-
         if (existingVote) {
-            // If vote already exists, update it
             if (existingVote.value === value) {
-                // Toggle off the vote
                 await prisma.vote.delete({ where: { id: existingVote.id } });
-                return res.json({ value: 0 });
+                return res.json(
+                    voteResponse({
+                        userId,
+                        targetType: "question",
+                        targetId: questionId,
+                        value: 0,
+                    })
+                );
             } else {
-                // Change the vote
-                vote = await prisma.vote.update({
+                await prisma.vote.update({
                     where: { id: existingVote.id },
                     data: { value },
                 });
             }
         } else {
-            // Else, create new vote
-            vote = await prisma.vote.create({
+            await prisma.vote.create({
                 data: { userId, questionId, value },
             });
         }
 
-        res.json({ userId, questionId, value });
+        res.json(
+            voteResponse({
+                userId,
+                targetType: "question",
+                targetId: questionId,
+                value,
+            })
+        );
     } catch (error) {
         console.error("Error voting on question:", error);
         res.status(500).json({ error: "Internal server error" });
@@ -45,8 +67,13 @@ export const voteOnQuestion = async (req, res) => {
 };
 
 export const voteOnAnswer = async (req, res) => {
-    const { answerId, value } = req.body;
+    const answerId = Number.parseInt(req.body?.answerId, 10);
+    const value = parseVoteValue(req.body?.value);
     const userId = req.user.userId;
+
+    if (!Number.isInteger(answerId)) {
+        return res.status(400).json({ error: "Invalid answer id" });
+    }
 
     if (![1, -1].includes(value)) {
         return res.status(400).json({ error: "Invalid vote value" });
@@ -57,27 +84,37 @@ export const voteOnAnswer = async (req, res) => {
             where: { userId, answerId },
         });
 
-        let vote;
-
         if (existingVote) {
             if (existingVote.value === value) {
-                // Toggle off the vote
                 await prisma.vote.delete({ where: { id: existingVote.id } });
-                return res.json({ value: 0 });
+                return res.json(
+                    voteResponse({
+                        userId,
+                        targetType: "answer",
+                        targetId: answerId,
+                        value: 0,
+                    })
+                );
             } else {
-                // Change the vote
-                vote = await prisma.vote.update({
+                await prisma.vote.update({
                     where: { id: existingVote.id },
                     data: { value },
                 });
             }
         } else {
-            vote = await prisma.vote.create({
+            await prisma.vote.create({
                 data: { userId, answerId, value },
             });
         }
 
-        res.json(vote);
+        res.json(
+            voteResponse({
+                userId,
+                targetType: "answer",
+                targetId: answerId,
+                value,
+            })
+        );
     } catch (error) {
         console.error("Error voting on answer:", error);
         res.status(500).json({ error: "Internal server error" });

@@ -1,13 +1,38 @@
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
+const normalizeString = (value) => (typeof value === "string" ? value.trim() : "");
+
+const validateQuestionPayload = ({ title, body }) => {
+    const normalizedTitle = normalizeString(title);
+    const normalizedBody = normalizeString(body);
+
+    if (!normalizedTitle || normalizedTitle.length < 5 || normalizedTitle.length > 200) {
+        return { error: "Title must be between 5 and 200 characters" };
+    }
+
+    if (!normalizedBody || normalizedBody.length < 10) {
+        return { error: "Question body must be at least 10 characters" };
+    }
+
+    return { normalizedTitle, normalizedBody };
+};
+
 export const createQuestion = async (req, res) => {
-    const { title, body } = req.body;
     const authorId = req.user.userId;
+    const validation = validateQuestionPayload(req.body || {});
+
+    if (validation.error) {
+        return res.status(400).json({ error: validation.error });
+    }
 
     try {
         const question = await prisma.question.create({
-            data: { title, body, authorId },
+            data: {
+                title: validation.normalizedTitle,
+                body: validation.normalizedBody,
+                authorId,
+            },
         });
         res.status(201).json(question);
     } catch (err) {
@@ -50,19 +75,31 @@ export const getAllQuestions = async (req, res) => {
 };
 
 export const updateQuestion = async (req, res) => {
-    const { title, body } = req.body;
     const { id } = req.params;
+    const questionId = Number.parseInt(id, 10);
     const userId = req.user.userId;
+    const validation = validateQuestionPayload(req.body || {});
+
+    if (!Number.isInteger(questionId)) {
+        return res.status(400).json({ error: "Invalid question id" });
+    }
+
+    if (validation.error) {
+        return res.status(400).json({ error: validation.error });
+    }
   
     try {
-        const existing = await prisma.question.findUnique({ where: { id: parseInt(id) } });
+        const existing = await prisma.question.findUnique({ where: { id: questionId } });
     
         if (!existing) return res.status(404).json({ error: "Question not found" });
         if (existing.authorId !== userId) return res.status(403).json({ error: "Unauthorized" });
     
         const updated = await prisma.question.update({
-            where: { id: parseInt(id) },
-            data: { title, body },
+            where: { id: questionId },
+            data: {
+                title: validation.normalizedTitle,
+                body: validation.normalizedBody,
+            },
         });
     
         res.json(updated);
@@ -74,15 +111,20 @@ export const updateQuestion = async (req, res) => {
   
 export const deleteQuestion = async (req, res) => {
     const { id } = req.params;
+    const questionId = Number.parseInt(id, 10);
     const userId = req.user.userId;
+
+    if (!Number.isInteger(questionId)) {
+        return res.status(400).json({ error: "Invalid question id" });
+    }
   
     try {
-        const existing = await prisma.question.findUnique({ where: { id: parseInt(id) } });
+        const existing = await prisma.question.findUnique({ where: { id: questionId } });
     
         if (!existing) return res.status(404).json({ error: "Question not found" });
         if (existing.authorId !== userId) return res.status(403).json({ error: "Unauthorized" });
     
-        await prisma.question.delete({ where: { id: parseInt(id) } });
+        await prisma.question.delete({ where: { id: questionId } });
     
         res.json({ message: "Question deleted successfully" });
     } catch (err) {
@@ -93,10 +135,15 @@ export const deleteQuestion = async (req, res) => {
 
 export const getQuestionDetails = async (req, res) => {
     const { id } = req.params;
+    const questionId = Number.parseInt(id, 10);
+
+    if (!Number.isInteger(questionId)) {
+        return res.status(400).json({ error: "Invalid question id" });
+    }
   
     try {
         const question = await prisma.question.findUnique({
-            where: { id: parseInt(id) },
+            where: { id: questionId },
             include: {
                 author: { select: { username: true } },
                 votes: true,

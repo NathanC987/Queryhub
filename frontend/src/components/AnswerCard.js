@@ -1,8 +1,17 @@
 import React, { useState } from "react";
 import API from "../api";
 
+const getStoredUser = () => {
+  try {
+    const rawUser = localStorage.getItem("user");
+    return rawUser ? JSON.parse(rawUser) : null;
+  } catch (error) {
+    return null;
+  }
+};
+
 const AnswerCard = ({ answer }) => {
-  const user = JSON.parse(localStorage.getItem("user"));
+  const user = getStoredUser();
 
   const initialVoteCount = answer.votes
     ? answer.votes.reduce((sum, v) => sum + v.value, 0)
@@ -13,6 +22,11 @@ const AnswerCard = ({ answer }) => {
   const [userVoteValue, setUserVoteValue] = useState(existingUserVote?.value || 0);
 
   const handleVote = async (value) => {
+    if (!user) {
+      alert("Please log in to vote");
+      return;
+    }
+
     try {
       const res = await API.post("/votes/answer", {
         answerId: answer.id,
@@ -24,13 +38,6 @@ const AnswerCard = ({ answer }) => {
 
       setVotes((prev) => prev - oldValue + newVoteValue);
       setUserVoteValue(newVoteValue);
-
-      const existingVote = answer.votes?.find((v) => v.userId === user.id);
-      if (existingVote) {
-        existingVote.value = newVoteValue;
-      } else {
-        answer.votes = [...(answer.votes || []), { userId: user.id, value: newVoteValue }];
-      }
     } catch (err) {
       alert(err.response?.data?.error || "Vote failed");
     }

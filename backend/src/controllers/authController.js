@@ -4,11 +4,30 @@ import jwt from "jsonwebtoken";
 
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const normalizeString = (value) => (typeof value === "string" ? value.trim() : "");
 
 export const signup = async (req, res) => {
-    console.log(req.body);
+    const username = normalizeString(req.body?.username);
+    const email = normalizeString(req.body?.email).toLowerCase();
+    const password = normalizeString(req.body?.password);
 
-    const { username, email, password } = req.body;
+    if (!username || username.length < 3 || username.length > 30) {
+        return res.status(400).json({ error: "Username must be between 3 and 30 characters" });
+    }
+
+    if (!EMAIL_REGEX.test(email)) {
+        return res.status(400).json({ error: "Please provide a valid email" });
+    }
+
+    if (!password || password.length < 6) {
+        return res.status(400).json({ error: "Password must be at least 6 characters" });
+    }
+
+    if (!JWT_SECRET) {
+        return res.status(500).json({ error: "Server auth configuration error" });
+    }
 
     try {
         const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -34,9 +53,20 @@ export const signup = async (req, res) => {
 };
 
 export const login = async (req, res) => {
-    console.log(req.body);
+    const email = normalizeString(req.body?.email).toLowerCase();
+    const password = normalizeString(req.body?.password);
 
-    const { email, password } = req.body;
+    if (!EMAIL_REGEX.test(email)) {
+        return res.status(400).json({ error: "Please provide a valid email" });
+    }
+
+    if (!password) {
+        return res.status(400).json({ error: "Password is required" });
+    }
+
+    if (!JWT_SECRET) {
+        return res.status(500).json({ error: "Server auth configuration error" });
+    }
 
     try {
         const user = await prisma.user.findUnique({ where: { email } });
