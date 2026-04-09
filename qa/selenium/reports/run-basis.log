@@ -1,0 +1,18 @@
+============================= test session starts ==============================
+platform linux -- Python 3.14.3, pytest-9.0.3, pluggy-1.6.0 -- /home/nathan/Queryhub/qa/selenium/.venv/bin/python
+cachedir: .pytest_cache
+metadata: {'Python': '3.14.3', 'Platform': 'Linux-6.19.10-arch1-1-x86_64-with-glibc2.43', 'Packages': {'pytest': '9.0.3', 'pluggy': '1.6.0'}, 'Plugins': {'json-report': '1.5.0', 'xdist': '3.8.0', 'metadata': '3.1.1', 'html': '4.2.0'}}
+rootdir: /home/nathan/Queryhub/qa/selenium
+configfile: pytest.ini
+plugins: json-report-1.5.0, xdist-3.8.0, metadata-3.1.1, html-4.2.0
+collecting ... collected 11 items / 8 deselected / 3 selected
+
+tests/test_whitebox_basis.py::test_basis_path_default_listing PASSED     [ 33%]
+tests/test_whitebox_basis.py::test_basis_path_search_and_status_branch PASSED [ 66%]
+tests/test_whitebox_basis.py::test_basis_path_sort_most_votes_branch PASSED [100%]
+
+- generated xml file: /home/nathan/Queryhub/qa/selenium/reports/junit-basis.xml -
+--------------------------------- JSON report ----------------------------------
+report saved to: reports/report-basis.json
+- Generated html report: file:///home/nathan/Queryhub/qa/selenium/reports/report-basis.html -
+======================= 3 passed, 8 deselected in 10.95s =======================

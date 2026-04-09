@@ -1,0 +1,26 @@
+============================= test session starts ==============================
+platform linux -- Python 3.14.3, pytest-9.0.3, pluggy-1.6.0 -- /home/nathan/Queryhub/qa/selenium/.venv/bin/python
+cachedir: .pytest_cache
+metadata: {'Python': '3.14.3', 'Platform': 'Linux-6.19.10-arch1-1-x86_64-with-glibc2.43', 'Packages': {'pytest': '9.0.3', 'pluggy': '1.6.0'}, 'Plugins': {'json-report': '1.5.0', 'xdist': '3.8.0', 'metadata': '3.1.1', 'html': '4.2.0'}}
+rootdir: /home/nathan/Queryhub/qa/selenium
+configfile: pytest.ini
+plugins: json-report-1.5.0, xdist-3.8.0, metadata-3.1.1, html-4.2.0
+collecting ... collected 11 items
+
+tests/test_blackbox_bva.py::test_bva_question_title_min_minus_one PASSED [  9%]
+tests/test_blackbox_bva.py::test_bva_question_title_min_valid PASSED     [ 18%]
+tests/test_blackbox_bva.py::test_bva_question_title_max_plus_one PASSED  [ 27%]
+tests/test_blackbox_bva.py::test_bva_max_tags_plus_one PASSED            [ 36%]
+tests/test_blackbox_ep.py::test_ep_signup_valid_partition PASSED         [ 45%]
+tests/test_blackbox_ep.py::test_ep_login_invalid_partition PASSED        [ 54%]
+tests/test_blackbox_ep.py::test_ep_create_question_invalid_without_tag PASSED [ 63%]
+tests/test_blackbox_ep.py::test_ep_create_question_valid_partition PASSED [ 72%]
+tests/test_whitebox_basis.py::test_basis_path_default_listing PASSED     [ 81%]
+tests/test_whitebox_basis.py::test_basis_path_search_and_status_branch PASSED [ 90%]
+tests/test_whitebox_basis.py::test_basis_path_sort_most_votes_branch PASSED [100%]
+
+- generated xml file: /home/nathan/Queryhub/qa/selenium/reports/junit-all.xml --
+--------------------------------- JSON report ----------------------------------
+report saved to: reports/report-all.json
+- Generated html report: file:///home/nathan/Queryhub/qa/selenium/reports/report-all.html -
+======================== 11 passed in 127.13s (0:02:07) ========================

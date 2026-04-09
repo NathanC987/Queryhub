@@ -1,0 +1,19 @@
+============================= test session starts ==============================
+platform linux -- Python 3.14.3, pytest-9.0.3, pluggy-1.6.0 -- /home/nathan/Queryhub/qa/selenium/.venv/bin/python
+cachedir: .pytest_cache
+metadata: {'Python': '3.14.3', 'Platform': 'Linux-6.19.10-arch1-1-x86_64-with-glibc2.43', 'Packages': {'pytest': '9.0.3', 'pluggy': '1.6.0'}, 'Plugins': {'json-report': '1.5.0', 'xdist': '3.8.0', 'metadata': '3.1.1', 'html': '4.2.0'}}
+rootdir: /home/nathan/Queryhub/qa/selenium
+configfile: pytest.ini
+plugins: json-report-1.5.0, xdist-3.8.0, metadata-3.1.1, html-4.2.0
+collecting ... collected 11 items / 7 deselected / 4 selected
+
+tests/test_blackbox_ep.py::test_ep_signup_valid_partition PASSED         [ 25%]
+tests/test_blackbox_ep.py::test_ep_login_invalid_partition PASSED        [ 50%]
+tests/test_blackbox_ep.py::test_ep_create_question_invalid_without_tag PASSED [ 75%]
+tests/test_blackbox_ep.py::test_ep_create_question_valid_partition PASSED [100%]
+
+-- generated xml file: /home/nathan/Queryhub/qa/selenium/reports/junit-ep.xml --
+--------------------------------- JSON report ----------------------------------
+report saved to: reports/report-ep.json
+- Generated html report: file:///home/nathan/Queryhub/qa/selenium/reports/report-ep.html -
+======================= 4 passed, 7 deselected in 19.01s =======================

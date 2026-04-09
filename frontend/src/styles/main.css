@@ -224,6 +224,14 @@ input:focus, textarea:focus,
   margin: 0;
 }
 
+.sort-column {
+  border-right: 1px solid #e5e7eb;
+  padding-right: 12px;
+}
+
+.tags-column {
+  padding-left: 4px;
+}
 .tags-column .tag-chip-list {
   align-content: flex-start;
 }
@@ -250,6 +258,17 @@ input:focus, textarea:focus,
   .inline-tag-filters {
     justify-content: flex-start;
     max-width: none;
+  }
+
+  .sort-column {
+    border-right: none;
+    padding-right: 0;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 12px;
+  }
+
+  .tags-column {
+    padding-left: 0;
   }
 }
 
