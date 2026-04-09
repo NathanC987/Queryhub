@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import API from "../api";
 import AnswerCard from "../components/AnswerCard";
@@ -21,6 +21,13 @@ const QuestionPage = () => {
   const [questionVotes, setQuestionVotes] = useState(0);
   const [userVoteValue, setUserVoteValue] = useState(0);
   const [answers, setAnswers] = useState([]);
+  const [answersPage, setAnswersPage] = useState(1);
+  const [answersPagination, setAnswersPagination] = useState({
+    page: 1,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
   const [newAnswer, setNewAnswer] = useState("");
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -39,33 +46,44 @@ const QuestionPage = () => {
     });
   };
 
+  const fetchQuestionData = useCallback(async () => {
+    try {
+      const res = await API.get(`/questions/${id}`, {
+        params: {
+          answersPage,
+          answersLimit: 5,
+        },
+      });
+      const q = res.data.question;
+      setQuestion(q);
+
+      const voteCount = q.votes ? q.votes.reduce((sum, v) => sum + v.value, 0) : 0;
+      setQuestionVotes(voteCount);
+
+      const existingVote = q.votes?.find((v) => v.userId === user?.id);
+      setUserVoteValue(existingVote?.value || 0);
+
+      setAnswers(sortAnswersWithAcceptedFirst(res.data.answers, q.acceptedAnswerId));
+      setAnswersPagination(res.data.answersPagination || {
+        page: 1,
+        totalPages: 1,
+        hasNextPage: false,
+        hasPrevPage: false,
+      });
+
+      setEditedTitle(q.title);
+      setEditedBody(q.body);
+
+      setLoading(false);
+    } catch (err) {
+      console.error("Failed to fetch question", err);
+      setLoading(false);
+    }
+  }, [answersPage, id, user?.id]);
+
   useEffect(() => {
-    const fetchQuestion = async () => {
-      try {
-        const res = await API.get(`/questions/${id}`);
-        console.log("Fetched Question Data:", res.data.question);
-        const q = res.data.question;
-        setQuestion(q);
-
-        const voteCount = q.votes ? q.votes.reduce((sum, v) => sum + v.value, 0) : 0;
-        setQuestionVotes(voteCount);
-
-        const existingVote = q.votes?.find((v) => v.userId === user?.id);
-        setUserVoteValue(existingVote?.value || 0);
-
-        setAnswers(sortAnswersWithAcceptedFirst(res.data.answers, q.acceptedAnswerId));
-
-        setEditedTitle(q.title);
-        setEditedBody(q.body);
-
-        setLoading(false);
-      } catch (err) {
-        console.error("Failed to fetch question", err);
-        setLoading(false);
-      }
-    };
-    fetchQuestion();
-  }, [id, user?.id]);
+    fetchQuestionData();
+  }, [fetchQuestionData]);
 
   const handleQuestionVote = async (value) => {
     if (!user) {
@@ -112,12 +130,13 @@ const QuestionPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await API.post("/answers", { 
+      await API.post("/answers", {
         questionId: question.id,
-        body: newAnswer 
+        body: newAnswer
       });
-      setAnswers(sortAnswersWithAcceptedFirst([...answers, res.data], question.acceptedAnswerId));
       setNewAnswer("");
+      setAnswersPage(1);
+      await fetchQuestionData();
     } catch (err) {
       alert(err.response?.data?.error || "Failed to post answer");
     }
@@ -263,16 +282,40 @@ const QuestionPage = () => {
       {answers.length === 0 ? (
         <p className="no-answers">No answers yet.</p>
       ) : (
-        answers.map((a) => (
-          <AnswerCard
-            key={a.id}
-            answer={a}
-            isAccepted={question.acceptedAnswerId === a.id}
-            canAccept={user?.id === question.authorId}
-            onAccept={() => handleAcceptAnswer(a.id)}
-            onUnaccept={handleUnacceptAnswer}
-          />
-        ))
+        <>
+          {answers.map((a) => (
+            <AnswerCard
+              key={a.id}
+              answer={a}
+              isAccepted={question.acceptedAnswerId === a.id}
+              canAccept={user?.id === question.authorId}
+              onAccept={() => handleAcceptAnswer(a.id)}
+              onUnaccept={handleUnacceptAnswer}
+            />
+          ))}
+
+          {answersPagination.totalPages > 1 && (
+            <div className="pagination-controls">
+              <button
+                type="button"
+                className="pagination-btn"
+                onClick={() => setAnswersPage((prev) => Math.max(1, prev - 1))}
+                disabled={!answersPagination.hasPrevPage}
+              >
+                Previous
+              </button>
+              <span className="pagination-info">Page {answersPagination.page} of {answersPagination.totalPages}</span>
+              <button
+                type="button"
+                className="pagination-btn"
+                onClick={() => setAnswersPage((prev) => prev + 1)}
+                disabled={!answersPagination.hasNextPage}
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {user && (

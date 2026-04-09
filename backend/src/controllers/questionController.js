@@ -102,32 +102,138 @@ export const createQuestion = async (req, res) => {
 
 export const getAllQuestions = async (req, res) => {
     const tagFilter = normalizeTagName(req.query?.tag || "");
+    const tagsFilter = typeof req.query?.tags === "string"
+        ? [...new Set(req.query.tags.split(",").map(normalizeTagName).filter(Boolean))]
+        : [];
+    const combinedTagFilters = [...new Set([...(tagFilter ? [tagFilter] : []), ...tagsFilter])];
+    const searchQuery = normalizeString(req.query?.q || "");
+    const statusFilter = normalizeString(req.query?.status || "all").toLowerCase();
+    const sortBy = normalizeString(req.query?.sort || "newest").toLowerCase();
+    const parsedPage = Number.parseInt(req.query?.page, 10);
+    const parsedLimit = Number.parseInt(req.query?.limit, 10);
+    const page = Number.isInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+    const limit = Number.isInteger(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, 50) : 10;
+    const skip = (page - 1) * limit;
+    const whereConditions = [];
 
-    try {
-        const questions = await prisma.question.findMany({
-            where: tagFilter
-                ? {
-                    tags: {
-                        some: {
-                            tag: {
-                                name: tagFilter,
-                            },
+    if (combinedTagFilters.length > 0) {
+        whereConditions.push({
+            tags: {
+                some: {
+                    tag: {
+                        name: {
+                            in: combinedTagFilters,
                         },
                     },
-                }
-                : undefined,
-            include: {
-                author: { select: { username: true } },
-                votes: true,
-                tags: { include: { tag: true } },
-                _count: {
-                    select: { answers: true },
                 },
             },
-            orderBy: {
-                createdAt: "desc",
+        });
+    }
+
+    if (searchQuery) {
+        whereConditions.push({
+            OR: [
+                {
+                    title: {
+                        contains: searchQuery,
+                        mode: "insensitive",
+                    },
+                },
+                {
+                    body: {
+                        contains: searchQuery,
+                        mode: "insensitive",
+                    },
+                },
+                {
+                    author: {
+                        username: {
+                            contains: searchQuery,
+                            mode: "insensitive",
+                        },
+                    },
+                },
+            ],
+        });
+    }
+
+    if (statusFilter === "answered") {
+        whereConditions.push({
+            answers: {
+                some: {},
             },
         });
+    } else if (statusFilter === "unanswered") {
+        whereConditions.push({
+            answers: {
+                none: {},
+            },
+        });
+    } else if (statusFilter === "solved") {
+        whereConditions.push({
+            acceptedAnswerId: {
+                not: null,
+            },
+        });
+    } else if (statusFilter === "unsolved") {
+        whereConditions.push({
+            acceptedAnswerId: null,
+        });
+    }
+
+    const whereClause = whereConditions.length > 0 ? { AND: whereConditions } : undefined;
+
+    let orderBy = { createdAt: "desc" };
+    if (sortBy === "oldest") {
+        orderBy = { createdAt: "asc" };
+    } else if (sortBy === "most-answers") {
+        orderBy = [{ answers: { _count: "desc" } }, { createdAt: "desc" }];
+    } else if (sortBy === "recently-updated") {
+        orderBy = { updatedAt: "desc" };
+    }
+
+    try {
+        const totalItems = await prisma.question.count({ where: whereClause });
+        const includeConfig = {
+            author: { select: { username: true } },
+            votes: true,
+            tags: { include: { tag: true } },
+            _count: {
+                select: { answers: true },
+            },
+        };
+
+        let questions;
+        if (sortBy === "most-votes") {
+            const allMatchingQuestions = await prisma.question.findMany({
+                where: whereClause,
+                include: includeConfig,
+                orderBy: {
+                    createdAt: "desc",
+                },
+            });
+
+            const sorted = allMatchingQuestions.sort((a, b) => {
+                const votesA = Array.isArray(a.votes) ? a.votes.reduce((sum, vote) => sum + vote.value, 0) : 0;
+                const votesB = Array.isArray(b.votes) ? b.votes.reduce((sum, vote) => sum + vote.value, 0) : 0;
+
+                if (votesB !== votesA) {
+                    return votesB - votesA;
+                }
+
+                return new Date(b.createdAt) - new Date(a.createdAt);
+            });
+
+            questions = sorted.slice(skip, skip + limit);
+        } else {
+            questions = await prisma.question.findMany({
+                where: whereClause,
+                include: includeConfig,
+                orderBy,
+                skip,
+                take: limit,
+            });
+        }
 
         const questionsWithVotes = questions.map((question) => {
             const voteCount = Array.isArray(question.votes)
@@ -141,7 +247,19 @@ export const getAllQuestions = async (req, res) => {
             };
         });
 
-        res.json(questionsWithVotes);
+        const totalPages = Math.max(1, Math.ceil(totalItems / limit));
+
+        res.json({
+            items: questionsWithVotes,
+            pagination: {
+                page,
+                limit,
+                totalItems,
+                totalPages,
+                hasNextPage: page < totalPages,
+                hasPrevPage: page > 1,
+            },
+        });
     } catch (err) {
         console.error("Fetch Questions Error:", err);
         res.status(500).json({ error: "Failed to fetch questions" });
@@ -249,6 +367,11 @@ export const deleteQuestion = async (req, res) => {
 export const getQuestionDetails = async (req, res) => {
     const { id } = req.params;
     const questionId = Number.parseInt(id, 10);
+    const parsedAnswersPage = Number.parseInt(req.query?.answersPage, 10);
+    const parsedAnswersLimit = Number.parseInt(req.query?.answersLimit, 10);
+    const answersPage = Number.isInteger(parsedAnswersPage) && parsedAnswersPage > 0 ? parsedAnswersPage : 1;
+    const answersLimit = Number.isInteger(parsedAnswersLimit) && parsedAnswersLimit > 0 ? Math.min(parsedAnswersLimit, 50) : 5;
+    const answersSkip = (answersPage - 1) * answersLimit;
 
     if (!Number.isInteger(questionId)) {
         return res.status(400).json({ error: "Invalid question id" });
@@ -261,12 +384,6 @@ export const getQuestionDetails = async (req, res) => {
                 author: { select: { username: true } },
                 votes: true,
                 acceptedAnswer: { select: { id: true } },
-                answers: {
-                    include: {
-                        author: { select: { username: true } },
-                        votes: true,
-                    },
-                },
                 tags: { include: { tag: true } },
             },
         });
@@ -278,7 +395,22 @@ export const getQuestionDetails = async (req, res) => {
         // Calculate vote counts
         const questionVoteCount = question.votes.reduce((sum, vote) => sum + vote.value, 0);
   
-        const answersWithVotes = question.answers.map((answer) => {
+        const totalAnswers = await prisma.answer.count({ where: { questionId } });
+
+        const answers = await prisma.answer.findMany({
+            where: { questionId },
+            include: {
+                author: { select: { username: true } },
+                votes: true,
+            },
+            orderBy: {
+                createdAt: "desc",
+            },
+            skip: answersSkip,
+            take: answersLimit,
+        });
+
+        const answersWithVotes = answers.map((answer) => {
             const voteCount = answer.votes.reduce((sum, vote) => sum + vote.value, 0);
             return {
                 ...answer,
@@ -290,6 +422,8 @@ export const getQuestionDetails = async (req, res) => {
             if (!a.isAccepted && b.isAccepted) return 1;
             return 0;
         });
+
+        const totalAnswerPages = Math.max(1, Math.ceil(totalAnswers / answersLimit));
 
         res.json({
             question: {
@@ -306,6 +440,14 @@ export const getQuestionDetails = async (req, res) => {
                 acceptedAnswerId: question.acceptedAnswerId,
             },
             answers: answersWithVotes,
+            answersPagination: {
+                page: answersPage,
+                limit: answersLimit,
+                totalItems: totalAnswers,
+                totalPages: totalAnswerPages,
+                hasNextPage: answersPage < totalAnswerPages,
+                hasPrevPage: answersPage > 1,
+            },
         });
     } catch (error) {
         console.error("Error fetching question details:", error);
